@@ -15,11 +15,12 @@ var ballSpeedX = 5;
 var ballSpeedY = 7;
 
 const BRICK_W = 80;
-const BRICK_H = 40; //temporarily doubled
+const BRICK_H = 20; 
 const BRICK_COLS = 10;
 const BRICK_GAP = 2;
-const BRICK_ROWS = 7; //temporarily halved
+const BRICK_ROWS = 14; 
 var brickGrid = new Array (BRICK_COLS * BRICK_ROWS);
+var bricksLeft = 0;
 
 const PADDLE_WIDTH = 100;
 const PADDLE_THICKNESS = 10;
@@ -41,17 +42,22 @@ function updateMousePos(evt) {
     paddleX = mouseX - PADDLE_WIDTH / 2;
 
     // cheat / hack to test ball in any position
-    ballX = mouseX;
+    /*ballX = mouseX;
     ballY = mouseY;
     ballSpeedX = 4;
-    ballSpeedY = -4;
-
+    ballSpeedY = -4;*/
 }
-
+    
 function brickReset() {
-	for(var eachCol=0;eachCol<BRICK_COLS * BRICK_ROWS;eachCol++) {
-		brickGrid[eachCol] = true;	
-	} // end of for each brick
+    bricksLeft = 0;
+    var eachCol;
+    for (eachCol = 0; eachCol < 3 * BRICK_COLS; eachCol++) {
+        brickGrid[eachCol] = false;
+    }
+    for (; eachCol < BRICK_COLS * BRICK_ROWS; eachCol++) {
+        brickGrid[eachCol] = true;
+        bricksLeft++;
+    } // end of for each brick
 } // end of brickReset func
 
 window.onload = function() {
@@ -64,7 +70,7 @@ window.onload = function() {
 	canvas.addEventListener('mousemove',updateMousePos);
 
 	brickReset();
-	// ballReset();
+	ballReset();
 }
 
 function updateAll() {
@@ -92,20 +98,33 @@ function ballMove(){
         }
         if (ballY > canvas.height) { // bottom
             ballReset();
+            brickReset();
         }   
+}
+
+function isBrickAtColRow(col, row) {
+    if (col >= 0 && col < BRICK_COLS &&
+        row >= 0 && row < BRICK_ROWS) {
+        var brickIndexUnderCoord = rowColToArrayIndex(col, row);
+        return brickGrid[brickIndexUnderCoord];
+    } else {
+        return false;
+    }
 }
 
 function ballBrickHandling() {
     var ballBrickCol = Math.floor(ballX / BRICK_W);
     var ballBrickRow = Math.floor(ballY / BRICK_H);
-    var brickIndexUnderBall = rolColToArrayIndex
+    var brickIndexUnderBall = rowColToArrayIndex
         (ballBrickCol, ballBrickRow);
 
     if (ballBrickCol >= 0 && ballBrickCol < BRICK_COLS &&
         ballBrickRow >= 0 && ballBrickRow < BRICK_ROWS) {
 
-        if (brickGrid[brickIndexUnderBall]) {
+        if (isBrickAtColRow( ballBrickCol, ballBrickRow) ) {
             brickGrid[brickIndexUnderBall] = false;
+            bricksLeft--;
+            console.log(bricksLeft); // in the console, shows how many bricks are left
 
             var prevBallX = ballX - ballSpeedX;
             var prevBallY = ballY - ballSpeedY;
@@ -115,20 +134,16 @@ function ballBrickHandling() {
             var bothTestsFailed = true;
 
             if (prevBrickCol != ballBrickCol) {
-                var adjBrickSide = rolColToArrayIndex(prevBrickCol, ballBrickRow);
-
-                if (brickGrid[adjBrickSide] == false) {
+                if (isBrickAtColRow(prevBrickCol, ballBrickRow) == false ) {
                     ballSpeedX *= -1;
                     bothTestsFailed = false;
                 }
             }
 
             if (prevBrickRow != ballBrickRow) {
-                var adjBrickTopBot = rolColToArrayIndex(ballBrickCol, prevBrickRow);
-
-                if (brickGrid[adjBrickTopBot] == false) {
+                if (isBrickAtColRow(ballBrickCol, prevBrickRow) == false) {
                     ballSpeedY *= -1;
-                    bothTestsFailed == false;
+                    bothTestsFailed = false;
                 }
             }
 
@@ -156,8 +171,12 @@ function ballPaddleHandling() {
         var centerOfPaddleX = paddleX + PADDLE_WIDTH / 2;
         var ballDistFromPaddleCenterX = ballX - centerOfPaddleX;
         ballSpeedX = ballDistFromPaddleCenterX * 0.35;
-    }
-}
+
+        if (bricksLeft == 0) {
+            brickReset();
+        } // when there is no more bricks, reset bricks
+    } // reflect angle of the ball when it hits the paddle
+} // end of ballPaddleHandling func
 
 function moveAll() {
     ballMove();
@@ -167,7 +186,7 @@ function moveAll() {
     ballPaddleHandling();  
 }
 
-function rolColToArrayIndex(col, row) {
+function rowColToArrayIndex(col, row) {
 	return col + BRICK_COLS * row;
 }
 
@@ -176,7 +195,7 @@ function drawBricks() {
 	for(var eachRow=0;eachRow<BRICK_ROWS;eachRow++) {	
 		for(var eachCol=0;eachCol<BRICK_COLS;eachCol++) {
 	
-			var arrayIndex = rolColToArrayIndex(eachCol, eachRow);
+            var arrayIndex = rowColToArrayIndex(eachCol, eachRow);
 
 			if(brickGrid[arrayIndex]) {
 				colorRect(BRICK_W*eachCol,BRICK_H*eachRow, 
